@@ -16,7 +16,59 @@
 
 package uk.gov.hmrc
 
-import sbt.AutoPlugin
+import sbt.*
+import com.typesafe.sbt.web.SbtWeb
+import sbt.{AllRequirements, AutoPlugin, Def, File, HiddenFileFilter, IO, PluginTrigger, Plugins, TaskKey}
 import sbt.Keys.*
+import com.typesafe.sbt.web.SbtWeb.autoImport.*
+import com.typesafe.sbt.web.Import.WebKeys.*
+import de.larsgrefer.sass.embedded.SassCompilerFactory
 
-object SbtSassCompiler extends AutoPlugin {}
+import scala.util.Using
+
+object SbtSassCompiler extends AutoPlugin {
+  override def requires: Plugins      = SbtWeb
+  override def trigger: PluginTrigger = AllRequirements
+
+  object autoImport {
+    val compileSass = TaskKey[Seq[File]]("compileSass", "Create css files from scss and sass files.")
+  }
+
+  import autoImport.*
+
+  override def projectSettings = Seq(
+    Assets / excludeFilter                 := HiddenFileFilter || "*.sass" || "*.scss",
+    Assets / managedResourceDirectories += (Assets / compileSass / resourceManaged).value,
+    // define where to compile the sass into so that it can then be copied into public by SbtWeb
+    Assets / compileSass / resourceManaged := webTarget.value / "sass" / "main",
+    Assets / compileSass / excludeFilter   := HiddenFileFilter || "_*",
+    Assets / compileSass / includeFilter   := "*.sass" || "*.scss",
+    // make sure that we compile sass when assets are compiled by SbtWeb
+    Assets / resourceGenerators += Assets / compileSass,
+    // define how sass files should be compiled
+    Assets / compileSass                   := Def
+      .task {
+        val sourceDir       = (Assets / sourceDirectory).value
+        val sourcePath      = sourceDir.toPath
+        val targetPath      = (Assets / compileSass / resourceManaged).value.toPath
+        val sassFilesFilter = (
+          (Assets / compileSass / includeFilter).value
+            -- (Assets / compileSass / excludeFilter).value
+        )
+        val sassFilesFound  = sourceDir.globRecursive(sassFilesFilter).get.filterNot(_.isDirectory)
+        Using(SassCompilerFactory.bundled()) { sassCompiler =>
+          sassFilesFound.map { sassFile =>
+            val cssFile = targetPath
+              .resolve(sourcePath.relativize(sassFile.toPath))
+              .resolveSibling(sassFile.base + ".css")
+            IO.createDirectory(cssFile.getParent.toFile)
+            IO.write(cssFile.toFile, sassCompiler.compileFile(sassFile).getCss)
+            cssFile.toFile
+          }
+        }.get
+      }
+      .dependsOn(Assets / webModules)
+      .value
+  )
+
+}
