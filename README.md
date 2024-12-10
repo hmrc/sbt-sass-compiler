@@ -4,7 +4,7 @@
 This is a SBT plugin to compile CSS from Sass files.
 
 `sbt-sass-compiler` is built on [Dart Sass](https://sass-lang.com/dart-sass/). It is intended as a replacement for
-[sbt-sasify](https://github.com/irundaia/sbt-sassify), which uses the deprecated [LibSass](https://sass-lang.com/libsass/)
+[sbt-sassify](https://github.com/irundaia/sbt-sassify), which uses the deprecated [LibSass](https://sass-lang.com/libsass/)
 implementation.
 
 ### License
