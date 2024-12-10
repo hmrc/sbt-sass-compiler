@@ -4,10 +4,10 @@ lazy val root = (project in file("."))
     version                := "0.1",
     scalaVersion           := "2.13.12",
     TaskKey[Unit]("check") := {
-      val compiledCSS = IO.read((Assets / WebKeys.public).value / "stylesheets" / "application.css")
-      val expectedCSS = IO.read(new File("expected-compiled.css"))
+      val compiledCSS = IO.read((Assets / WebKeys.public).value / "stylesheets" / "application.css").strip()
+      val expectedCSS = IO.read(new File("expected-compiled.css")).strip()
       if (compiledCSS != expectedCSS) {
-        sys.error("compiled CSS did not match the expected CSS")
+        sys.error(s"compiled CSS did not match the expected CSS\n\n$compiledCSS\n\n--------\n\n$expectedCSS")
       }
     }
   )

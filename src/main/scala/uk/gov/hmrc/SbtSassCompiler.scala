@@ -22,6 +22,9 @@ import sbt.{AllRequirements, AutoPlugin, Def, File, HiddenFileFilter, IO, Plugin
 import sbt.Keys.*
 import com.typesafe.sbt.web.SbtWeb.autoImport.*
 import com.typesafe.sbt.web.Import.WebKeys.*
+import de.larsgrefer.sass.embedded.SassCompilerFactory
+
+import scala.util.Using
 
 object SbtSassCompiler extends AutoPlugin {
   override def requires: Plugins      = SbtWeb
@@ -34,10 +37,11 @@ object SbtSassCompiler extends AutoPlugin {
   import autoImport.*
 
   override def projectSettings = Seq(
+    Assets / excludeFilter                 := HiddenFileFilter || "*.sass" || "*.scss",
     Assets / managedResourceDirectories += (Assets / compileSass / resourceManaged).value,
     // define where to compile the sass into so that it can then be copied into public by SbtWeb
     Assets / compileSass / resourceManaged := webTarget.value / "sass" / "main",
-    Assets / compileSass / excludeFilter   := HiddenFileFilter,
+    Assets / compileSass / excludeFilter   := HiddenFileFilter || "_*",
     Assets / compileSass / includeFilter   := "*.sass" || "*.scss",
     // make sure that we compile sass when assets are compiled by SbtWeb
     Assets / resourceGenerators += Assets / compileSass,
@@ -52,14 +56,16 @@ object SbtSassCompiler extends AutoPlugin {
             -- (Assets / compileSass / excludeFilter).value
         )
         val sassFilesFound  = sourceDir.globRecursive(sassFilesFilter).get.filterNot(_.isDirectory)
-        sassFilesFound.map { sassFile =>
-          val cssFile = targetPath
-            .resolve(sourcePath.relativize(sassFile.toPath))
-            .resolveSibling(sassFile.base + ".css")
-          IO.createDirectory(cssFile.getParent.toFile)
-          IO.write(cssFile.toFile, IO.readBytes(sassFile))
-          cssFile.toFile
-        }
+        Using(SassCompilerFactory.bundled()) { sassCompiler =>
+          sassFilesFound.map { sassFile =>
+            val cssFile = targetPath
+              .resolve(sourcePath.relativize(sassFile.toPath))
+              .resolveSibling(sassFile.base + ".css")
+            IO.createDirectory(cssFile.getParent.toFile)
+            IO.write(cssFile.toFile, sassCompiler.compileFile(sassFile).getCss)
+            cssFile.toFile
+          }
+        }.get
       }
       .dependsOn(Assets / webModules)
       .value
