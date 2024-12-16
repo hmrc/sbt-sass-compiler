@@ -56,8 +56,10 @@ object SbtSassCompiler extends AutoPlugin {
             -- (Assets / compileSass / excludeFilter).value
         )
         val sassFilesFound  = sourceDir.globRecursive(sassFilesFilter).get.filterNot(_.isDirectory)
+        val logger = streams.value.log
+        logger.info(s"Sass compiling via sbt-sass-compiler: ${sassFilesFound.length} files")
         Using(SassCompilerFactory.bundled()) { sassCompiler =>
-          sassFilesFound.map { sassFile =>
+          val cssFiles = sassFilesFound.map { sassFile =>
             val cssFile = targetPath
               .resolve(sourcePath.relativize(sassFile.toPath))
               .resolveSibling(sassFile.base + ".css")
@@ -65,6 +67,8 @@ object SbtSassCompiler extends AutoPlugin {
             IO.write(cssFile.toFile, sassCompiler.compileFile(sassFile).getCss)
             cssFile.toFile
           }
+          logger.info(s"Number of CSS files generated: ${cssFiles.length}")
+          cssFiles
         }.get
       }
       .dependsOn(Assets / webModules)
