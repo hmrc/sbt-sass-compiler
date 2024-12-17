@@ -8,6 +8,7 @@ lazy val `sbt-sass-compiler` = project
     majorVersion       := 0,
     sbtPlugin          := true,
     isPublicArtefact   := true,
+    addSbtPlugin("com.github.sbt" % "sbt-web" % "1.5.8"),
     libraryDependencies ++= Seq(
       "de.larsgrefer.sass" % "sass-embedded-host" % "3.6.0"
     ),
@@ -27,6 +28,5 @@ lazy val `sbt-sass-compiler` = project
           s"-Dsbt.repository.config=${file(homeDir) / ".sbt" / "repositories"}"
         )
     },
-    scriptedBufferLog  := false,
-    addSbtPlugin("com.github.sbt" % "sbt-web" % "1.5.8")
+    scriptedBufferLog  := false
   )
