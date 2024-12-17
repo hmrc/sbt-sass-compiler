@@ -31,7 +31,7 @@ object SbtSassCompiler extends AutoPlugin {
   override def trigger: PluginTrigger = AllRequirements
 
   object autoImport {
-    val compileSass = TaskKey[Seq[File]]("compileSass", "Create css files from scss and sass files.")
+    val compileSass = TaskKey[Seq[File]]("compileSass", "Create .css files from .scss and .sass files.")
   }
 
   import autoImport.*
