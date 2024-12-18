@@ -23,6 +23,7 @@ import sbt.Keys.*
 import com.typesafe.sbt.web.SbtWeb.autoImport.*
 import com.typesafe.sbt.web.Import.WebKeys.*
 import de.larsgrefer.sass.embedded.SassCompilerFactory
+import scala.collection.JavaConverters._
 
 import scala.util.Using
 
@@ -58,8 +59,15 @@ object SbtSassCompiler extends AutoPlugin {
         val sassFilesFound  = sourceDir.globRecursive(sassFilesFilter).get.filterNot(_.isDirectory)
         val logger = streams.value.log
         logger.info(s"Sass compiling via sbt-sass-compiler: ${sassFilesFound.length} files")
+
+        // Assets / webModules unpacks webjars to the webJarsDirectory target/web-modules/main
+        val sassLoadPaths = List[java.io.File](
+          (Assets / webJarsDirectory).value
+        ).asJava
+
         Using(SassCompilerFactory.bundled()) { sassCompiler =>
           val cssFiles = sassFilesFound.map { sassFile =>
+            sassCompiler.setLoadPaths(sassLoadPaths) // no need to set a path of the current file as well
             val cssFile = targetPath
               .resolve(sourcePath.relativize(sassFile.toPath))
               .resolveSibling(sassFile.base + ".css")
