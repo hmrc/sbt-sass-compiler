@@ -23,9 +23,9 @@ import sbt.Keys.*
 import com.typesafe.sbt.web.SbtWeb.autoImport.*
 import com.typesafe.sbt.web.Import.WebKeys.*
 import de.larsgrefer.sass.embedded.SassCompilerFactory
-import scala.collection.JavaConverters._
 
-import scala.util.Using
+import scala.collection.JavaConverters.*
+import scala.util.{Failure, Success, Try, Using}
 
 object SbtSassCompiler extends AutoPlugin {
   override def requires: Plugins      = SbtWeb
@@ -66,14 +66,21 @@ object SbtSassCompiler extends AutoPlugin {
         ).asJava
 
         Using(SassCompilerFactory.bundled()) { sassCompiler =>
-          val cssFiles = sassFilesFound.map { sassFile =>
+          val cssFiles: Seq[File] = sassFilesFound.map { sassFile =>
             sassCompiler.setLoadPaths(sassLoadPaths) // no need to set a path of the current file as well
             val cssFile = targetPath
               .resolve(sourcePath.relativize(sassFile.toPath))
               .resolveSibling(sassFile.base + ".css")
             IO.createDirectory(cssFile.getParent.toFile)
-            IO.write(cssFile.toFile, sassCompiler.compileFile(sassFile).getCss)
-            cssFile.toFile
+            Try(sassCompiler.compileFile(sassFile).getCss) match {
+              case Success(css) =>
+                IO.write(cssFile.toFile, css)
+                cssFile.toFile
+              case Failure(exception) =>
+                logger.error(s"Compilation error for ${cssFile.getFileName}: ${exception.getMessage}")
+                IO.write(cssFile.toFile, " ")
+                cssFile.toFile
+            }
           }
           logger.info(s"Number of CSS files generated: ${cssFiles.length}")
           cssFiles
