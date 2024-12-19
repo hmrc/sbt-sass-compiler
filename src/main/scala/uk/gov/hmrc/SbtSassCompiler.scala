@@ -25,7 +25,8 @@ import com.typesafe.sbt.web.Import.WebKeys.*
 import de.larsgrefer.sass.embedded.SassCompilerFactory
 import scala.collection.JavaConverters._
 
-import scala.util.Using
+import scala.util.{Failure, Success, Try, Using}
+import java.nio.file.Path
 
 object SbtSassCompiler extends AutoPlugin {
   override def requires: Plugins      = SbtWeb
@@ -66,17 +67,34 @@ object SbtSassCompiler extends AutoPlugin {
         ).asJava
 
         Using(SassCompilerFactory.bundled()) { sassCompiler =>
-          val cssFiles = sassFilesFound.map { sassFile =>
+          val eitherCompiledCssFiles: Seq[Either[Throwable, (String, Path)]] = sassFilesFound.map { sassFile =>
             sassCompiler.setLoadPaths(sassLoadPaths) // no need to set a path of the current file as well
-            val cssFile = targetPath
-              .resolve(sourcePath.relativize(sassFile.toPath))
-              .resolveSibling(sassFile.base + ".css")
-            IO.createDirectory(cssFile.getParent.toFile)
-            IO.write(cssFile.toFile, sassCompiler.compileFile(sassFile).getCss)
-            cssFile.toFile
+            Try(sassCompiler.compileFile(sassFile).getCss) match {
+              case Success(compiledCss) =>
+                val cssFile = targetPath
+                  .resolve(sourcePath.relativize(sassFile.toPath))
+                  .resolveSibling(sassFile.base + ".css")
+                Right((compiledCss, cssFile))
+              case Failure(compilationError) => Left(compilationError)
+            }
           }
-          logger.info(s"Number of CSS files generated: ${cssFiles.length}")
-          cssFiles
+
+          val errors: Seq[Throwable] = eitherCompiledCssFiles.flatMap(_.left.toOption)
+          val compiledCss: Seq[(String, Path)] = eitherCompiledCssFiles.flatMap(_.right.toOption)
+
+          if (errors.nonEmpty) {
+            throw new Exception(
+              s"${errors.length} error(s) whilst compiling Sass files\n${errors.mkString("\n")}"
+            )
+          } else {
+            val cssFiles: Seq[File] = compiledCss map { case (css, cssFile) =>
+              IO.createDirectory(cssFile.getParent.toFile)
+              IO.write(cssFile.toFile, css)
+              cssFile.toFile
+            }
+            logger.info(s"Number of CSS files generated: ${cssFiles.length}")
+            cssFiles
+          }
         }.get
       }
       .dependsOn(Assets / webModules)
