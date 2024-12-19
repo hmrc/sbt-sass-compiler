@@ -1,6 +1,4 @@
-# checks that a CSS file can be generated (the `assets` key will be provided by sbt-web)
-> assets
-$ exists target/web/public/main/stylesheets/application.css
-$ exists target/web/public/main/stylesheets/include-partial.css
-> checkApplicationCss
-> checkPartialCss
+# checks that the `assets` tasks fails (the `assets` key will be provided by sbt-web)
+-> assets
+$ absent target/web/public/main/stylesheets/application.css
+$ absent target/web/public/main/stylesheets/include-partial.css

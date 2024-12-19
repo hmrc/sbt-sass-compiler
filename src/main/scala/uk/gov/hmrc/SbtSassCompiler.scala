@@ -66,6 +66,21 @@ object SbtSassCompiler extends AutoPlugin {
         ).asJava
 
         Using(SassCompilerFactory.bundled()) { sassCompiler =>
+          val maybeCompiledCssFiles: Seq[Try[String]] = sassFilesFound.map { sassFile =>
+            sassCompiler.setLoadPaths(sassLoadPaths) // no need to set a path of the current file as well
+            val cssFile = targetPath
+              .resolve(sourcePath.relativize(sassFile.toPath))
+              .resolveSibling(sassFile.base + ".css")
+            Try(sassCompiler.compileFile(sassFile).getCss)
+          }
+
+          val failures: Seq[Try[String]] = maybeCompiledCssFiles.filter(file => file.isFailure)
+          if (failures.nonEmpty) {
+            throw new Exception(s"Stop the world! There were ${failures.length} compilation failure")
+          } else {
+
+
+
           val cssFiles: Seq[File] = sassFilesFound.map { sassFile =>
             sassCompiler.setLoadPaths(sassLoadPaths) // no need to set a path of the current file as well
             val cssFile = targetPath
@@ -83,7 +98,7 @@ object SbtSassCompiler extends AutoPlugin {
             }
           }
           logger.info(s"Number of CSS files generated: ${cssFiles.length}")
-          cssFiles
+          cssFiles }
         }.get
       }
       .dependsOn(Assets / webModules)
