@@ -23,12 +23,13 @@ import sbt.Keys.*
 import com.typesafe.sbt.web.SbtWeb.autoImport.*
 import com.typesafe.sbt.web.Import.WebKeys.*
 import de.larsgrefer.sass.embedded.SassCompilerFactory
-import scala.collection.JavaConverters._
 
-import scala.util.Using
+import scala.collection.JavaConverters.*
+import scala.util.{Failure, Success, Try, Using}
 
 object SbtSassCompiler extends AutoPlugin {
-  override def requires: Plugins      = SbtWeb
+  override def requires: Plugins = SbtWeb
+
   override def trigger: PluginTrigger = AllRequirements
 
   object autoImport {
@@ -38,25 +39,25 @@ object SbtSassCompiler extends AutoPlugin {
   import autoImport.*
 
   override def projectSettings = Seq(
-    Assets / excludeFilter                 := HiddenFileFilter || "*.sass" || "*.scss",
+    Assets / excludeFilter := HiddenFileFilter || "*.sass" || "*.scss",
     Assets / managedResourceDirectories += (Assets / compileSass / resourceManaged).value,
     // define where to compile the sass into so that it can then be copied into public by SbtWeb
     Assets / compileSass / resourceManaged := webTarget.value / "sass" / "main",
-    Assets / compileSass / excludeFilter   := HiddenFileFilter || "_*",
-    Assets / compileSass / includeFilter   := "*.sass" || "*.scss",
+    Assets / compileSass / excludeFilter := HiddenFileFilter || "_*",
+    Assets / compileSass / includeFilter := "*.sass" || "*.scss",
     // make sure that we compile sass when assets are compiled by SbtWeb
     Assets / resourceGenerators += Assets / compileSass,
     // define how sass files should be compiled
-    Assets / compileSass                   := Def
+    Assets / compileSass := Def
       .task {
-        val sourceDir       = (Assets / sourceDirectory).value
-        val sourcePath      = sourceDir.toPath
-        val targetPath      = (Assets / compileSass / resourceManaged).value.toPath
+        val sourceDir = (Assets / sourceDirectory).value
+        val sourcePath = sourceDir.toPath
+        val targetPath = (Assets / compileSass / resourceManaged).value.toPath
         val sassFilesFilter = (
           (Assets / compileSass / includeFilter).value
             -- (Assets / compileSass / excludeFilter).value
-        )
-        val sassFilesFound  = sourceDir.globRecursive(sassFilesFilter).get.filterNot(_.isDirectory)
+          )
+        val sassFilesFound = sourceDir.globRecursive(sassFilesFilter).get.filterNot(_.isDirectory)
         val logger = streams.value.log
         logger.info(s"Sass compiling via sbt-sass-compiler: ${sassFilesFound.length} files")
 
@@ -66,17 +67,34 @@ object SbtSassCompiler extends AutoPlugin {
         ).asJava
 
         Using(SassCompilerFactory.bundled()) { sassCompiler =>
-          val cssFiles = sassFilesFound.map { sassFile =>
+          val maybeCompiledCssFiles: Seq[Try[String]] = sassFilesFound.map { sassFile =>
             sassCompiler.setLoadPaths(sassLoadPaths) // no need to set a path of the current file as well
-            val cssFile = targetPath
-              .resolve(sourcePath.relativize(sassFile.toPath))
-              .resolveSibling(sassFile.base + ".css")
-            IO.createDirectory(cssFile.getParent.toFile)
-            IO.write(cssFile.toFile, sassCompiler.compileFile(sassFile).getCss)
-            cssFile.toFile
+            Try(sassCompiler.compileFile(sassFile).getCss)
           }
-          logger.info(s"Number of CSS files generated: ${cssFiles.length}")
-          cssFiles
+          val failures: Seq[Try[String]] = maybeCompiledCssFiles.filter(file => file.isFailure)
+          
+          if (failures.nonEmpty) {
+            throw new Exception(s"Stop the world! There were ${failures.length} compilation failure")
+          } else {
+            val cssFiles: Seq[File] = sassFilesFound.map { sassFile =>
+              sassCompiler.setLoadPaths(sassLoadPaths) // no need to set a path of the current file as well
+              val cssFile = targetPath
+                .resolve(sourcePath.relativize(sassFile.toPath))
+                .resolveSibling(sassFile.base + ".css")
+              IO.createDirectory(cssFile.getParent.toFile)
+              Try(sassCompiler.compileFile(sassFile).getCss) match {
+                case Success(css) =>
+                  IO.write(cssFile.toFile, css)
+                  cssFile.toFile
+                case Failure(exception) =>
+                  logger.error(s"Compilation error for ${cssFile.getFileName}: ${exception.getMessage}")
+                  IO.write(cssFile.toFile, " ")
+                  cssFile.toFile
+              }
+            }
+            logger.info(s"Number of CSS files generated: ${cssFiles.length}")
+            cssFiles
+          }
         }.get
       }
       .dependsOn(Assets / webModules)

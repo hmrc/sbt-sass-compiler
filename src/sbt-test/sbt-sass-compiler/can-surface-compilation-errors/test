@@ -1,0 +1,4 @@
+# checks that the `assets` tasks fails (the `assets` key will be provided by sbt-web)
+-> assets
+$ absent target/web/public/main/stylesheets/application.css
+$ absent target/web/public/main/stylesheets/include-partial.css
