@@ -31,6 +31,8 @@ object SbtSassCompiler extends AutoPlugin {
 
   object autoImport {
     val compileSass = TaskKey[Seq[File]]("compileSass", "Create .css files from .scss and .sass files.")
+
+    val copyPackageJson = taskKey[Unit]("say hello")
   }
 
   import autoImport.*
@@ -44,6 +46,14 @@ object SbtSassCompiler extends AutoPlugin {
     Assets / compileSass / includeFilter   := "*.sass" || "*.scss",
     // make sure that we compile sass when assets are compiled by SbtWeb
     Assets / resourceGenerators += Assets / compileSass,
+    // copy across the package.json file
+    createPackageJson := {
+      val baseDirectory: File = Keys.baseDirectory.value
+      if (baseDirectory.isDirectory) {
+        val file = new File(baseDirectory.toPath.toString + "/" + "package.json")
+        IO.write(file, packageJsonContents)
+      }
+    },
     // define how sass files should be compiled
     Assets / compileSass                   := Def
       .task {
@@ -94,4 +104,17 @@ object SbtSassCompiler extends AutoPlugin {
       .value
   )
 
+  val packageJsonContents =
+    """
+      |{
+      |  "scripts": {
+      |    "compile:sass": "sass $npm_config_sassfile $npm_config_cssfile"
+      |  },
+      |  "devDependencies": {
+      |    "sass": "^1.83.0"
+      |  }
+      |}
+      |""".stripMargin
+
 }
+

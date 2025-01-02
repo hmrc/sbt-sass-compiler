@@ -1,8 +1,0 @@
-{
-  "scripts": {
-    "compile:sass": "sass $npm_config_sassfile $npm_config_cssfile"
-  },
-  "devDependencies": {
-    "sass": "^1.83.0"
-  }
-}
