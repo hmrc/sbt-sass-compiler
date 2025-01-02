@@ -22,10 +22,8 @@ import sbt.{AllRequirements, AutoPlugin, Def, File, HiddenFileFilter, IO, Plugin
 import sbt.Keys.*
 import com.typesafe.sbt.web.SbtWeb.autoImport.*
 import com.typesafe.sbt.web.Import.WebKeys.*
-import de.larsgrefer.sass.embedded.SassCompilerFactory
-import scala.collection.JavaConverters._
 
-import scala.util.Using
+import scala.sys.process.*
 
 object SbtSassCompiler extends AutoPlugin {
   override def requires: Plugins      = SbtWeb
@@ -61,23 +59,37 @@ object SbtSassCompiler extends AutoPlugin {
         logger.info(s"Sass compiling via sbt-sass-compiler: ${sassFilesFound.length} files")
 
         // Assets / webModules unpacks webjars to the webJarsDirectory target/web-modules/main
-        val sassLoadPaths = List[java.io.File](
-          (Assets / webJarsDirectory).value
-        ).asJava
+        // TODO: Still need to look at this for npm solution
+//        val sassLoadPaths = List[java.io.File](
+//          (Assets / webJarsDirectory).value
+//        ).asJava
 
-        Using(SassCompilerFactory.bundled()) { sassCompiler =>
-          val cssFiles = sassFilesFound.map { sassFile =>
-            sassCompiler.setLoadPaths(sassLoadPaths) // no need to set a path of the current file as well
-            val cssFile = targetPath
-              .resolve(sourcePath.relativize(sassFile.toPath))
-              .resolveSibling(sassFile.base + ".css")
-            IO.createDirectory(cssFile.getParent.toFile)
-            IO.write(cssFile.toFile, sassCompiler.compileFile(sassFile).getCss)
-            cssFile.toFile
-          }
-          logger.info(s"Number of CSS files generated: ${cssFiles.length}")
-          cssFiles
-        }.get
+        val installCmd = Seq(
+          "npm",
+          "install"
+        )
+
+        installCmd.!
+
+        val cssFiles = sassFilesFound.map { sassFile =>
+          val cssFile = targetPath
+            .resolve(sourcePath.relativize(sassFile.toPath))
+            .resolveSibling(sassFile.base + ".css")
+
+          val compileCmd = Seq(
+            "npm",
+            "run",
+            "compile:sass",
+            s"--sassfile=${sassFile.toPath.toString}",
+            s"--cssfile=${cssFile.toString}"
+          )
+
+          compileCmd.!
+          cssFile.toFile
+        }
+
+        logger.info(s"Number of CSS files generated: ${cssFiles.length}")
+        cssFiles
       }
       .dependsOn(Assets / webModules)
       .value
