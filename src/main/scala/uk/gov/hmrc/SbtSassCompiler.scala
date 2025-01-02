@@ -68,7 +68,6 @@ object SbtSassCompiler extends AutoPlugin {
           "npm",
           "install"
         )
-
         installCmd.!
 
         val cssFiles = sassFilesFound.map { sassFile =>
