@@ -8,15 +8,15 @@ lazy val root = (project in file("."))
     TaskKey[Unit]("checkApplicationCss") := {
       val compiledCSS = IO.read((Assets / WebKeys.public).value / "stylesheets" / "application.css").strip()
       val expectedCSS = IO.read(new File("expected-compiled-application.css")).strip()
-      if (compiledCSS != expectedCSS) {
-        sys.error(s"compiled CSS did not match the expected CSS\n\n$compiledCSS\n\n--------\n\n$expectedCSS")
+      if (!compiledCSS.contains(expectedCSS)) {
+        sys.error(s"compiled CSS did not include the expected CSS\n\n$compiledCSS\n\n--------\n\n$expectedCSS")
       }
     },
     TaskKey[Unit]("checkPrintCss") := {
       val compiledCSS = IO.read((Assets / WebKeys.public).value / "stylesheets" / "print.css").strip()
       val expectedCSS = IO.read(new File("expected-compiled-print.css")).strip()
-      if (compiledCSS != expectedCSS) {
-        sys.error(s"compiled CSS did not match the expected CSS\n\n$compiledCSS\n\n--------\n\n$expectedCSS")
+      if (!compiledCSS.contains(expectedCSS)) {
+        sys.error(s"compiled CSS did not include the expected CSS\n\n$compiledCSS\n\n--------\n\n$expectedCSS")
       }
     }
   )

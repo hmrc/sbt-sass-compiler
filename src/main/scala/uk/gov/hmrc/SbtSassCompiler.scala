@@ -32,7 +32,7 @@ object SbtSassCompiler extends AutoPlugin {
   object autoImport {
     val compileSass = TaskKey[Seq[File]]("compileSass", "Create .css files from .scss and .sass files.")
 
-    val copyPackageJson = taskKey[Unit]("say hello")
+    val createPackageJson = taskKey[Unit]("say hello")
   }
 
   import autoImport.*
@@ -101,6 +101,7 @@ object SbtSassCompiler extends AutoPlugin {
         cssFiles
       }
       .dependsOn(Assets / webModules)
+      .dependsOn(createPackageJson)
       .value
   )
 
