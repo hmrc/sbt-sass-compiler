@@ -70,9 +70,12 @@ object SbtSassCompiler extends AutoPlugin {
 
         // Assets / webModules unpacks webjars to the webJarsDirectory target/web-modules/main
         // TODO: Still need to look at this for npm solution
-//        val sassLoadPaths = List[java.io.File](
-//          (Assets / webJarsDirectory).value
-//        ).asJava
+        val sassLoadPaths = List[java.io.File](
+          (Assets / webJarsDirectory).value
+        )
+        val loadPaths = sassLoadPaths.map { loadPath =>
+          s"--load-path=${loadPath.toPath.toString}"
+        }.mkString(" ")
 
         val installCmd = Seq(
           "npm",
@@ -89,6 +92,7 @@ object SbtSassCompiler extends AutoPlugin {
             "npm",
             "run",
             "compile:sass",
+            s"--loadpaths=$loadPaths",
             s"--sassfile=${sassFile.toPath.toString}",
             s"--cssfile=${cssFile.toString}"
           )
@@ -109,7 +113,7 @@ object SbtSassCompiler extends AutoPlugin {
     """
       |{
       |  "scripts": {
-      |    "compile:sass": "sass $npm_config_sassfile $npm_config_cssfile"
+      |    "compile:sass": "sass $npm_config_loadpaths $npm_config_sassfile $npm_config_cssfile"
       |  },
       |  "devDependencies": {
       |    "sass": "^1.83.0"

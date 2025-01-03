@@ -8,6 +8,6 @@ lazy val root = (project in file("."))
       val expectedCSS = IO.read(new File("expected-compiled.css")).strip()
       if (!compiledCSS.contains(expectedCSS)) {
         sys.error(s"compiled CSS did not include the expected CSS\n\n$compiledCSS\n\n--------\n\n$expectedCSS")
-      }}
+      }
     }
   )
