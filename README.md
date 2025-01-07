@@ -15,13 +15,13 @@ Should you still need to provide your own custom SASS for any reason, then this 
 
 ## Migrating from sbt-sassify
 
-If you are currently using the `sbt-sassify` plugin, this plugin replaces it. To add the `sbt-sass-compiler` plugin, remove the `sbt-sassify` plugin which will look something like this:
+If you are currently using the `sbt-sassify` plugin, this plugin replaces it. To add the `sbt-sass-compiler` plugin, first make sure you have removed the `sbt-sassify` plugin which will look something like this:
 
 ```
 addSbtPlugin("io.github.irundaia" % "sbt-sassify" % "x.x.x")
 ```
 
-then add this to your `project/plugins.sbt` file:
+Then add this to your `project/plugins.sbt` file:
 
 ```
 addSbtPlugin("uk.gov.hmrc" % "sbt-sass-compiler" % "x.x.x")
