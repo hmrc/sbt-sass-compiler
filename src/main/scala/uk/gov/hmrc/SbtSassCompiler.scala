@@ -67,6 +67,7 @@ object SbtSassCompiler extends AutoPlugin {
         ).asJava
 
         Using(SassCompilerFactory.bundled()) { sassCompiler =>
+          val startInstant = System.currentTimeMillis
           val eitherCompiledCssFiles: Seq[Either[Throwable, (String, Path)]] = sassFilesFound.map { sassFile =>
             sassCompiler.setLoadPaths(sassLoadPaths) // no need to set a path of the current file as well
             Try(sassCompiler.compileFile(sassFile).getCss) match {
@@ -92,7 +93,9 @@ object SbtSassCompiler extends AutoPlugin {
               IO.write(cssFile.toFile, css)
               cssFile.toFile
             }
-            logger.info(s"Number of CSS files generated: ${cssFiles.length}")
+            val endInstant = System.currentTimeMillis
+
+            logger.info(s"Sass compilation done in ${endInstant - startInstant} ms. Number of CSS files generated: ${cssFiles.length}")
             cssFiles
           }
         }.get
