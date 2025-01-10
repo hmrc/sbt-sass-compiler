@@ -9,9 +9,9 @@ implementation.
 
 ## When to use sbt-sass-compiler
 
-If you are using the precompiled CSS bundled with `play-frontend-hmrc`, you do not need to use this plugin. If you have custom SASS that is fairly simple, consider whether you can achieve the same results with just CSS. 
+If you are using the precompiled CSS bundled with `play-frontend-hmrc`, you do not need to use this plugin. If you have custom Sass that is fairly simple, consider whether you can achieve the same results with just CSS. 
 
-Should you still need to provide your own custom SASS for any reason, then this plugin should be used instead of `sbt-sassify`.
+Should you still need to provide your own custom Sass for any reason, then this plugin should be used instead of `sbt-sassify`.
 
 ## Migrating from sbt-sassify
 
@@ -34,6 +34,11 @@ resolvers += Resolver.url("HMRC-open-artefacts-ivy2", url("https://open.artefact
     Resolver.ivyStylePatterns
 )
 ```
+### Migration support
+
+If you have any issues with this plugin, including questions about performance or functionality after migrating, please 
+reach out to PlatUI.  MDTP developers using Slack should contact us via #team-plat-ui. External developers can raise an 
+issue within the Github repo.
 
 ### License
 
