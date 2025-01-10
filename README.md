@@ -37,7 +37,7 @@ resolvers += Resolver.url("HMRC-open-artefacts-ivy2", url("https://open.artefact
 ### Migration support
 
 If you have any issues with this plugin, including questions about performance or functionality after migrating, please 
-reach out to PlatUI.  MDTP developers using Slack should contact us via #team-plat-ui. External developers can raise an 
+reach out to PlatUI. MDTP developers using Slack should contact us via #team-plat-ui. External developers can raise an 
 issue within the Github repo.
 
 ### License
