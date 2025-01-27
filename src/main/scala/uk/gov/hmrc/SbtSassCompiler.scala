@@ -18,7 +18,6 @@ package uk.gov.hmrc
 
 import sbt.*
 import com.typesafe.sbt.web.SbtWeb
-import sbt.{AllRequirements, AutoPlugin, Def, File, HiddenFileFilter, IO, PluginTrigger, Plugins, TaskKey}
 import sbt.Keys.*
 import com.typesafe.sbt.web.SbtWeb.autoImport.*
 import com.typesafe.sbt.web.Import.WebKeys.*
@@ -50,6 +49,16 @@ object SbtSassCompiler extends AutoPlugin {
     // define how sass files should be compiled
     Assets / compileSass                   := Def
       .task {
+        val logger = streams.value.log
+
+        try {
+          Class.forName("org.irundaia.sbt.sass.SbtSassify")
+
+          logger.warn("The sbt-sassify plugin detected. Please remove it to avoid unexpected behaviour.")
+        } catch {
+          case _: ClassNotFoundException => logger.info("Check for sbt-sassify completed.")
+        }
+
         val sourceDir       = (Assets / sourceDirectory).value
         val sourcePath      = sourceDir.toPath
         val targetPath      = (Assets / compileSass / resourceManaged).value.toPath
@@ -58,7 +67,6 @@ object SbtSassCompiler extends AutoPlugin {
             -- (Assets / compileSass / excludeFilter).value
         )
         val sassFilesFound  = sourceDir.globRecursive(sassFilesFilter).get.filterNot(_.isDirectory)
-        val logger = streams.value.log
         logger.info(s"Sass compiling via sbt-sass-compiler: ${sassFilesFound.length} files")
 
         // Assets / webModules unpacks webjars to the webJarsDirectory target/web-modules/main
