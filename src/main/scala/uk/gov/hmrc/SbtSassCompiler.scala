@@ -51,13 +51,9 @@ object SbtSassCompiler extends AutoPlugin {
       .task {
         val logger = streams.value.log
 
-        try {
-          Class.forName("org.irundaia.sbt.sass.SbtSassify")
-
-          logger.warn("The sbt-sassify plugin detected. Please remove it to avoid unexpected behaviour.")
-        } catch {
-          case _: ClassNotFoundException => logger.info("Check for sbt-sassify completed.")
-        }
+        Try(Class.forName("org.irundaia.sbt.sass.SbtSassify"))
+          .toOption
+          .map(_ => logger.warn("The sbt-sassify plugin detected. Please remove it to avoid unexpected behaviour."))
 
         val sourceDir       = (Assets / sourceDirectory).value
         val sourcePath      = sourceDir.toPath
