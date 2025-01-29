@@ -18,7 +18,6 @@ package uk.gov.hmrc
 
 import sbt.*
 import com.typesafe.sbt.web.SbtWeb
-import sbt.{AllRequirements, AutoPlugin, Def, File, HiddenFileFilter, IO, PluginTrigger, Plugins, TaskKey}
 import sbt.Keys.*
 import com.typesafe.sbt.web.SbtWeb.autoImport.*
 import com.typesafe.sbt.web.Import.WebKeys.*
@@ -50,6 +49,12 @@ object SbtSassCompiler extends AutoPlugin {
     // define how sass files should be compiled
     Assets / compileSass                   := Def
       .task {
+        if (Try(Class.forName("org.irundaia.sbt.sass.SbtSassify")).isSuccess) {
+          throw new RuntimeException(
+            "SBT plugin conflict: sbt-sass-compiler cannot be used with sbt-sassify, remove sbt-sassify from your project/plugins.sbt"
+          )
+        }
+
         val sourceDir       = (Assets / sourceDirectory).value
         val sourcePath      = sourceDir.toPath
         val targetPath      = (Assets / compileSass / resourceManaged).value.toPath
@@ -58,7 +63,7 @@ object SbtSassCompiler extends AutoPlugin {
             -- (Assets / compileSass / excludeFilter).value
         )
         val sassFilesFound  = sourceDir.globRecursive(sassFilesFilter).get.filterNot(_.isDirectory)
-        val logger = streams.value.log
+        val logger          = streams.value.log
         logger.info(s"Sass compiling via sbt-sass-compiler: ${sassFilesFound.length} files")
 
         // Assets / webModules unpacks webjars to the webJarsDirectory target/web-modules/main
@@ -67,11 +72,11 @@ object SbtSassCompiler extends AutoPlugin {
         ).asJava
 
         Using(SassCompilerFactory.bundled()) { sassCompiler =>
-          val startInstant = System.currentTimeMillis
+          val startInstant                                                   = System.currentTimeMillis
           val eitherCompiledCssFiles: Seq[Either[Throwable, (String, Path)]] = sassFilesFound.map { sassFile =>
             sassCompiler.setLoadPaths(sassLoadPaths) // no need to set a path of the current file as well
             Try(sassCompiler.compileFile(sassFile).getCss) match {
-              case Success(compiledCss) =>
+              case Success(compiledCss)      =>
                 val cssFile = targetPath
                   .resolve(sourcePath.relativize(sassFile.toPath))
                   .resolveSibling(sassFile.base + ".css")
@@ -80,7 +85,7 @@ object SbtSassCompiler extends AutoPlugin {
             }
           }
 
-          val errors: Seq[Throwable] = eitherCompiledCssFiles.flatMap(_.left.toOption)
+          val errors: Seq[Throwable]           = eitherCompiledCssFiles.flatMap(_.left.toOption)
           val compiledCss: Seq[(String, Path)] = eitherCompiledCssFiles.flatMap(_.right.toOption)
 
           if (errors.nonEmpty) {
@@ -93,9 +98,11 @@ object SbtSassCompiler extends AutoPlugin {
               IO.write(cssFile.toFile, css)
               cssFile.toFile
             }
-            val endInstant = System.currentTimeMillis
+            val endInstant          = System.currentTimeMillis
 
-            logger.info(s"Sass compilation done in ${endInstant - startInstant} ms. Number of CSS files generated: ${cssFiles.length}")
+            logger.info(
+              s"Sass compilation done in ${endInstant - startInstant} ms. Number of CSS files generated: ${cssFiles.length}"
+            )
             cssFiles
           }
         }.get
