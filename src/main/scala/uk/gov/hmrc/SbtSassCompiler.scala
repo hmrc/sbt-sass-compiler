@@ -46,6 +46,8 @@ object SbtSassCompiler extends AutoPlugin {
     Assets / compileSass / includeFilter   := "*.sass" || "*.scss",
     // make sure that we compile sass when assets are compiled by SbtWeb
     Assets / resourceGenerators += Assets / compileSass,
+    // prevents the CSS being compiled again in hypothetical case of export as WebJar, see https://github.com/playframework/playframework/issues/5765#issuecomment-2167504627
+    Assets / WebKeys.exportedMappings := Nil,
     // define how sass files should be compiled
     Assets / compileSass                   := Def
       .task {
