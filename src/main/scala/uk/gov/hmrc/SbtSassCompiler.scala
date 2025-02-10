@@ -55,6 +55,25 @@ object SbtSassCompiler extends AutoPlugin {
           )
         }
 
+        // this would recompile all sass anytime one sass file changed
+        import sbt.util.CacheImplicits._
+        val s                       = streams.value
+        val allSassFiles            = // this would be sourceDir I just didn't want to modify anything else in file
+          (Assets / sourceDirectory).value.globRecursive((Assets / compileSass / includeFilter).value).get
+        val cachedCompiledSassFiles =
+          Tracked.inputChanged[Seq[ModifiedFileInfo], Seq[File]](s.cacheStoreFactory.make("input")) {
+            (anySassFileChanged: Boolean, _inputs: Seq[ModifiedFileInfo]) =>
+              s.log.error(java.time.LocalDateTime.now().toString)
+              if (anySassFileChanged) { // or if any files we would output don't exist, if we want to check that too
+                s.log.error(s"********RECOMPILING SASS********")
+                // do recompile within here
+              } else {
+                s.log.error("********SKIPPING RECOMPILE********")
+              }
+              Nil
+          }
+        cachedCompiledSassFiles(allSassFiles.map(FileInfo.lastModified(_))) // Seq[File]
+
         val sourceDir       = (Assets / sourceDirectory).value
         val sourcePath      = sourceDir.toPath
         val targetPath      = (Assets / compileSass / resourceManaged).value.toPath
