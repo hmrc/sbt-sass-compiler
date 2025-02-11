@@ -1,0 +1,7 @@
+> assets
+$ exists target/web/public/main/stylesheets/application.css
+-$ exists target/web/public/main/stylesheets/print.css
+> createSass
+> assets
+$ exists target/web/public/main/stylesheets/application.css
+$ exists target/web/public/main/stylesheets/print.css

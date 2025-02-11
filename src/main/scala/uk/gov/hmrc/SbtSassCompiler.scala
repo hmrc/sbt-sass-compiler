@@ -22,10 +22,10 @@ import sbt.Keys.*
 import com.typesafe.sbt.web.SbtWeb.autoImport.*
 import com.typesafe.sbt.web.Import.WebKeys.*
 import de.larsgrefer.sass.embedded.SassCompilerFactory
-import scala.collection.JavaConverters._
 
+import scala.collection.JavaConverters.*
 import scala.util.{Failure, Success, Try, Using}
-import java.nio.file.Path
+import java.nio.file.{Files, Path}
 
 object SbtSassCompiler extends AutoPlugin {
   override def requires: Plugins      = SbtWeb
@@ -58,54 +58,88 @@ object SbtSassCompiler extends AutoPlugin {
         val sourceDir       = (Assets / sourceDirectory).value
         val sourcePath      = sourceDir.toPath
         val targetPath      = (Assets / compileSass / resourceManaged).value.toPath
-        val sassFilesFilter = (
-          (Assets / compileSass / includeFilter).value
-            -- (Assets / compileSass / excludeFilter).value
-        )
-        val sassFilesFound  = sourceDir.globRecursive(sassFilesFilter).get.filterNot(_.isDirectory)
-        val logger          = streams.value.log
-        logger.info(s"Sass compiling via sbt-sass-compiler: ${sassFilesFound.length} files")
+
+        val allSassFilesFilter        = (Assets / compileSass / includeFilter).value -- HiddenFileFilter
+        val sassAndPartialsFilesFound = sourceDir.globRecursive(allSassFilesFilter).get.filterNot(_.isDirectory)
+        val sassFilesFound            = sassAndPartialsFilesFound.globRecursive(-"_*").get()
+
+        val streamsValue = streams.value
+        val logger       = streamsValue.log
 
         // Assets / webModules unpacks webjars to the webJarsDirectory target/web-modules/main
         val sassLoadPaths = List[java.io.File](
           (Assets / webJarsDirectory).value
         ).asJava
 
-        Using(SassCompilerFactory.bundled()) { sassCompiler =>
-          val startInstant                                                   = System.currentTimeMillis
-          val eitherCompiledCssFiles: Seq[Either[Throwable, (String, Path)]] = sassFilesFound.map { sassFile =>
-            sassCompiler.setLoadPaths(sassLoadPaths) // no need to set a path of the current file as well
-            Try(sassCompiler.compileFile(sassFile).getCss) match {
-              case Success(compiledCss)      =>
-                val cssFile = targetPath
-                  .resolve(sourcePath.relativize(sassFile.toPath))
-                  .resolveSibling(sassFile.base + ".css")
-                Right((compiledCss, cssFile))
-              case Failure(compilationError) => Left(compilationError)
+        // Compilation function that will be called if uncompiled Sass detected on run of `sbt assets`
+        def compileSassToCssFiles(): Seq[sbt.File] = {
+          Using(SassCompilerFactory.bundled()) { sassCompiler =>
+            logger.info(s"sbt-sass-compiler: Sass compiling for ${sassFilesFound.length} files")
+            val startInstant                                                   = System.currentTimeMillis
+            val eitherCompiledCssFiles: Seq[Either[Throwable, (String, Path)]] = sassFilesFound.map { sassFile =>
+              sassCompiler.setLoadPaths(sassLoadPaths) // no need to set a path of the current file as well
+              Try(sassCompiler.compileFile(sassFile).getCss) match {
+                case Success(compiledCss)      =>
+                  val cssFile = targetPath
+                    .resolve(sourcePath.relativize(sassFile.toPath))
+                    .resolveSibling(sassFile.base + ".css")
+                  Right((compiledCss, cssFile))
+                case Failure(compilationError) => Left(compilationError)
+              }
             }
-          }
 
-          val errors: Seq[Throwable]           = eitherCompiledCssFiles.flatMap(_.left.toOption)
-          val compiledCss: Seq[(String, Path)] = eitherCompiledCssFiles.flatMap(_.right.toOption)
+            val errors: Seq[Throwable]           = eitherCompiledCssFiles.flatMap(_.left.toOption)
+            val compiledCss: Seq[(String, Path)] = eitherCompiledCssFiles.flatMap(_.right.toOption)
 
-          if (errors.nonEmpty) {
-            throw new Exception(
-              s"${errors.length} error(s) whilst compiling Sass files\n${errors.mkString("\n")}"
-            )
-          } else {
-            val cssFiles: Seq[File] = compiledCss map { case (css, cssFile) =>
-              IO.createDirectory(cssFile.getParent.toFile)
-              IO.write(cssFile.toFile, css)
-              cssFile.toFile
+            if (errors.nonEmpty) {
+              throw new Exception(
+                s"sbt-sass-compiler: ${errors.length} error(s) whilst compiling Sass files\n${errors.mkString("\n")}"
+              )
+            } else {
+              val cssFiles: Seq[File] = compiledCss map { case (css, cssFile) =>
+                IO.createDirectory(cssFile.getParent.toFile)
+                IO.write(cssFile.toFile, css)
+                cssFile.toFile
+              }
+              val endInstant          = System.currentTimeMillis
+
+              logger.info(
+                s"sbt-sass-compiler: Sass compilation done in ${endInstant - startInstant} ms. Number of CSS files generated: ${cssFiles.length}"
+              )
+              cssFiles
             }
-            val endInstant          = System.currentTimeMillis
+          }.get
+        }
 
-            logger.info(
-              s"Sass compilation done in ${endInstant - startInstant} ms. Number of CSS files generated: ${cssFiles.length}"
-            )
-            cssFiles
+        def getExistingCssFromTargetDirectory(): Seq[File] = {
+          Try {
+            Files
+              .walk(targetPath)
+              .iterator()
+              .asScala
+              .toSeq
+              .map(_.toFile)
+              .filter(_.getName.endsWith("css"))
+          } getOrElse Nil
+        }
+
+        // this will recompile all Sass anytime any Sass file has changed since last run of task
+        import sbt.util.CacheImplicits._
+        val compileSassIfSourcesChanged: Seq[sbt.ModifiedFileInfo] => Seq[sbt.File] = {
+          logger.info("sbt-sass-compiler: Checking for Sass files needing compilation")
+          val existingCssFromTargetDirectory = getExistingCssFromTargetDirectory()
+          Tracked.inputChanged[Seq[ModifiedFileInfo], Seq[File]](streamsValue.cacheStoreFactory.make("input")) {
+            (anySassFileChanged: Boolean, _) =>
+              if (anySassFileChanged || (sassFilesFound.nonEmpty && existingCssFromTargetDirectory.isEmpty)) {
+                logger.info("sbt-sass-compiler: Uncompiled Sass files found")
+                compileSassToCssFiles()
+              } else {
+                logger.info("sbt-sass-compiler: No changes to Sass files, sbt-sass-compiler skipping compilation")
+                existingCssFromTargetDirectory
+              }
           }
-        }.get
+        }
+        compileSassIfSourcesChanged(sassAndPartialsFilesFound.map(FileInfo.lastModified(_)))
       }
       .dependsOn(Assets / webModules)
       .value

@@ -1,0 +1,8 @@
+# checks that a CSS file can be generated (the `assets` key will be provided by sbt-web)
+> assets
+$ exists target/web/public/main/stylesheets/application.css
+> check
+> rewrite
+> assets
+$ exists target/web/public/main/stylesheets/application.css
+> checkUpdated

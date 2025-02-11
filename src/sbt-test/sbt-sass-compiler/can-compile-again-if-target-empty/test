@@ -1,0 +1,6 @@
+> assets
+$ exists target/web/public/main/stylesheets/application.css
+$ delete target/web/public/main/stylesheets/application.css
+-$ exists target/web/public/main/stylesheets/application.css
+> assets
+$ exists target/web/public/main/stylesheets/application.css

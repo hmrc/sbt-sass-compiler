@@ -1,0 +1,5 @@
+> assets
+$ exists target/web/public/main/stylesheets/application.css
+> rewrite
+> assets
+> check
