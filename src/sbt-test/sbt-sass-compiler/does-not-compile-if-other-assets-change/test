@@ -1,0 +1,8 @@
+> assets
+$ exists target/web/public/main/stylesheets/application.css
+$ copy-file target/web/public/main/stylesheets/application.css target/web/public/main/stylesheets/copy.css
+$ newer target/web/public/main/stylesheets/copy.css target/web/public/main/stylesheets/application.css
+> createjs
+> assets
+$ exists target/web/public/main/stylesheets/application.css
+$ newer target/web/public/main/stylesheets/copy.css target/web/public/main/stylesheets/application.css
