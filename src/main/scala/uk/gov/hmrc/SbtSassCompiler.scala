@@ -111,23 +111,11 @@ object SbtSassCompiler extends AutoPlugin {
           }.get
         }
 
-        def getExistingCssFromTargetDirectory(): Seq[File] = {
-          Try {
-            Files
-              .walk(targetPath)
-              .iterator()
-              .asScala
-              .toSeq
-              .map(_.toFile)
-              .filter(_.getName.endsWith("css"))
-          } getOrElse Nil
-        }
-
         // this will recompile all Sass anytime any Sass file has changed since last run of task
         import sbt.util.CacheImplicits._
         val compileSassIfSourcesChanged: Seq[sbt.ModifiedFileInfo] => Seq[sbt.File] = {
           logger.info("sbt-sass-compiler: Checking for Sass files needing compilation")
-          val existingCssFromTargetDirectory = getExistingCssFromTargetDirectory()
+          val existingCssFromTargetDirectory = targetPath.toFile.globRecursive("*.css").get
           Tracked.inputChanged[Seq[ModifiedFileInfo], Seq[File]](streamsValue.cacheStoreFactory.make("input")) {
             (anySassFileChanged: Boolean, _) =>
               if (anySassFileChanged || (sassFilesFound.nonEmpty && existingCssFromTargetDirectory.isEmpty)) {
