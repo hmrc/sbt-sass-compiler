@@ -1,0 +1,6 @@
+# checks that it compiles
+> assets
+> createSass
+> deleteSassEmbedded
+> assets
+> findSassEmbedded

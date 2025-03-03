@@ -10,7 +10,7 @@ lazy val `sbt-sass-compiler` = project
     isPublicArtefact   := true,
     addSbtPlugin("com.github.sbt" % "sbt-web" % "1.5.8"),
     libraryDependencies ++= Seq(
-      "de.larsgrefer.sass" % "sass-embedded-host" % "3.6.0"
+      "de.larsgrefer.sass" % "sass-embedded-host" % "4.0.2"
     ),
     scriptedLaunchOpts := {
       val homeDir = sys.props
