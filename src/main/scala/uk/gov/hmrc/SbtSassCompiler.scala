@@ -26,6 +26,7 @@ import de.larsgrefer.sass.embedded.SassCompilerFactory
 import scala.collection.JavaConverters.*
 import scala.util.{Failure, Success, Try, Using}
 import java.nio.file.{Files, Path}
+import java.nio.file.Paths
 
 object SbtSassCompiler extends AutoPlugin {
   override def requires: Plugins      = SbtWeb
@@ -66,27 +67,14 @@ object SbtSassCompiler extends AutoPlugin {
         val streamsValue = streams.value
         val logger       = streamsValue.log
 
-        var sassCompilerFactoryBundled = SassCompilerFactory.bundled()
-
         // Assets / webModules unpacks webjars to the webJarsDirectory target/web-modules/main
         val sassLoadPaths = List[java.io.File](
           (Assets / webJarsDirectory).value
         ).asJava
 
-        def trySassCompilerFactoryBundled: Boolean = {
-          Try(sassCompilerFactoryBundled) match {
-            case Success(someValue) => {
-              return true
-            }
-            case Failure(someFailure) =>
-              logger.warn("No dart-sass executable found. Attempting to add executable.")
-              return false
-          }
-        }
-
         // Compilation function that will be called if uncompiled Sass detected on run of `sbt assets`
         def compileSassToCssFiles(): Seq[sbt.File] = {
-          Using(sassCompilerFactoryBundled) { sassCompiler =>
+          Using(SassCompilerFactory.bundled()) { sassCompiler =>
             logger.info(s"sbt-sass-compiler: Sass compiling for ${sassFilesFound.length} files")
             val startInstant                                                   = System.currentTimeMillis
             val eitherCompiledCssFiles: Seq[Either[Throwable, (String, Path)]] = sassFilesFound.map { sassFile =>
@@ -133,10 +121,13 @@ object SbtSassCompiler extends AutoPlugin {
             (anySassFileChanged: Boolean, _) =>
               if (anySassFileChanged || (sassFilesFound.nonEmpty && existingCssFromTargetDirectory.isEmpty)) {
                 logger.info("sbt-sass-compiler: Uncompiled Sass files found")
-                trySassCompilerFactoryBundled match {
-                  case true => { compileSassToCssFiles() }
-                  case false => {
-                    sassCompilerFactoryBundled = SassCompilerFactory.bundled() // if bundled fails the first time round, then attempting a re-trigger of bundled
+                try {
+                  compileSassToCssFiles()
+                } catch {
+                  case ise: IllegalStateException => {
+                    logger.error("sbt-sass-compiler: Sass compilation failed: " + ise)
+                    logger.info("sbt-sass-compiler: attempting to recover by removing the path and re-running SassCompilerFactory.bundled()")
+                    Files.delete(Paths.get(s"/tmp/de.larsgrefer.sass.embedded.connection.BundledPackageProvider/4.0.2/dart-sass/1.83.4/dart-sass"))
                     compileSassToCssFiles()
                   }
                 }
