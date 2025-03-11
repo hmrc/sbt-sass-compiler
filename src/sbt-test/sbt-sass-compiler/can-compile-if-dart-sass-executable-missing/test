@@ -1,6 +1,10 @@
-# checks that it compiles
+# Check the sass compiler can run
 > assets
+# Create a new sass file for next run
 > createSass
+# Delete directory where executable file exists, confirm executable is not found
 > deleteSassEmbedded
+-> findSassEmbedded
+# Rerun the sass compile, ensure the executable is found
 > assets
 > findSassEmbedded
