@@ -2,7 +2,7 @@
 $ touch src/main/assets/stylesheets/first.scss
 > assets
 $ exists target/web/public/main/stylesheets/first.css
-# Delete directory where executable file exists, confirm executable is not found
+# Delete executable file, rerun SassCompilerFactory.bundled
 > recreateBug
 $ touch src/main/assets/stylesheets/second.scss # because we only recompile when input changed
 > assets
