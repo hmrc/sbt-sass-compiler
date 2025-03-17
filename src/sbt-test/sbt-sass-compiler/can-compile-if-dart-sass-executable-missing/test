@@ -1,10 +1,9 @@
 # Check the sass compiler can run
+$ touch src/main/assets/stylesheets/first.scss
 > assets
-# Create a new sass file for next run
-> createSass
+$ exists target/web/public/main/stylesheets/first.css
 # Delete directory where executable file exists, confirm executable is not found
-> deleteSassEmbedded
--> findSassEmbedded
-# Rerun the sass compile, ensure the executable is found
+> recreateBug
+$ touch src/main/assets/stylesheets/second.scss # because we only recompile when input changed
 > assets
-> findSassEmbedded
+$ exists target/web/public/main/stylesheets/second.css
