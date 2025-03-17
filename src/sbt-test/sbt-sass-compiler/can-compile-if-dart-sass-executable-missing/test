@@ -1,0 +1,9 @@
+# Check the sass compiler can run
+$ touch src/main/assets/stylesheets/first.scss
+> assets
+$ exists target/web/public/main/stylesheets/first.css
+# Delete executable file, rerun SassCompilerFactory.bundled
+> recreateBug
+$ touch src/main/assets/stylesheets/second.scss # because we only recompile when input changed
+> assets
+$ exists target/web/public/main/stylesheets/second.css
