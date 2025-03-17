@@ -27,6 +27,7 @@ import scala.collection.JavaConverters.*
 import scala.util.{Failure, Success, Try, Using}
 import java.nio.file.Path
 import sbt.io.IO.delete
+import de.larsgrefer.sass.embedded.util.PropertyUtils
 
 object SbtSassCompiler extends AutoPlugin {
   override def requires: Plugins      = SbtWeb
@@ -37,8 +38,6 @@ object SbtSassCompiler extends AutoPlugin {
   }
 
   import autoImport.*
-
-  val sassEmbeddedHostVersion = "4.0.2"
 
   override def projectSettings = Seq(
     Assets / excludeFilter                 := HiddenFileFilter || "*.sass" || "*.scss",
@@ -129,7 +128,8 @@ object SbtSassCompiler extends AutoPlugin {
                   case ise: IllegalStateException => {
                     logger.error("sbt-sass-compiler: Sass compilation failed: " + ise)
                     logger.info("sbt-sass-compiler: attempting to recover by removing the path and re-running SassCompilerFactory.bundled()")
-                    delete(new File(s"/tmp/de.larsgrefer.sass.embedded.connection.BundledPackageProvider/${sassEmbeddedHostVersion}/dart-sass/1.83.4/dart-sass/"))
+                    val tmpDir: String = System.getProperty("java.io.tmpdir")
+                    delete(new File(s"${tmpDir}/de.larsgrefer.sass.embedded.connection.BundledPackageProvider/${PropertyUtils.getHostVersion()}/dart-sass/${PropertyUtils.getDartSassVersion()}/dart-sass/"))
                     compileSassToCssFiles()
                   }
                 }
