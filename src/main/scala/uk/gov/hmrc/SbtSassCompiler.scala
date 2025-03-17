@@ -22,12 +22,12 @@ import sbt.Keys.*
 import com.typesafe.sbt.web.SbtWeb.autoImport.*
 import com.typesafe.sbt.web.Import.WebKeys.*
 import de.larsgrefer.sass.embedded.SassCompilerFactory
+import de.larsgrefer.sass.embedded.util.PropertyUtils
 
 import scala.collection.JavaConverters.*
 import scala.util.{Failure, Success, Try, Using}
 import java.nio.file.Path
 import sbt.io.IO.delete
-import de.larsgrefer.sass.embedded.util.PropertyUtils
 
 object SbtSassCompiler extends AutoPlugin {
   override def requires: Plugins      = SbtWeb
@@ -97,7 +97,7 @@ object SbtSassCompiler extends AutoPlugin {
               throw new Exception(
                 s"sbt-sass-compiler: ${errors.length} error(s) whilst compiling Sass files\n${errors.mkString("\n")}"
               )
-            } else {
+            } else {4
               val cssFiles: Seq[File] = compiledCss map { case (css, cssFile) =>
                 IO.createDirectory(cssFile.getParent.toFile)
                 IO.write(cssFile.toFile, css)
